@@ -37,10 +37,10 @@ export default function transformOperationObject(
   {
     if (operationObject.parameters) {
       const parameterOutput: string[] = [];
-      let allParamsOptional = true;
+      let allParamsOptional = false;
       indentLv++;
       for (const paramIn of ["query", "header", "path", "cookie"] as ParameterObject["in"][]) {
-        let inlineParamsOptional = true;
+        let inlineParamsOptional = false;
         const inlineOutput: string[] = [];
         const refs: Record<string, string[]> = {};
         indentLv++;
@@ -68,10 +68,14 @@ export default function transformOperationObject(
           // been resolved in the initial step and follow a predictable pattern. so we can
           // do some clever string magic to link them up properly without needing the
           // original object
-          else if (p.$ref) {
+          else if (p.$ref && paramIn == 'query') {
             const parts = parseTSIndex(p.$ref);
             const paramI = parts.indexOf("parameters");
-            if (paramI === -1 || parts[paramI + 1] !== paramIn || !parts[paramI + 2]) continue;
+            //if (paramI === -1 || parts[paramI + 1] !== paramIn || !parts[paramI + 2]) continue;
+            // note: parameters can share names in different parts of the `in` key. `partsParamIn` makes sure we’re not
+            // referencing the wrong parameter with the same name but a different `in`
+            const partsParamIn = parts.find((p) => p === "query" || p === "header" || p === "path" || p === "cookie");
+            if (paramI === -1 || (partsParamIn && partsParamIn !== paramIn)) continue;
             const key = parts.pop() as string;
             const index = makeTSIndex(parts);
             if (!refs[index]) refs[index] = [key];
